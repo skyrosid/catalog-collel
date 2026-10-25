@@ -1,0 +1,36 @@
+{
+  "name": "collel-catalog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=10 <11"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @catalog/contracts build && pnpm --parallel --filter @catalog/api --filter @catalog/desktop dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm --filter @catalog/contracts build && pnpm -r typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm --filter @catalog/contracts build && vitest run",
+    "test:db": "pnpm --filter @catalog/contracts build && vitest run --config vitest.db.config.ts",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:db && pnpm build && pnpm format:check",
+    "db:migrate": "pnpm --filter @catalog/api db:migrate",
+    "package:desktop": "pnpm build && pnpm --filter @catalog/desktop package"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.0.0",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}

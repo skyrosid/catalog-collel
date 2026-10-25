@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+minimumReleaseAge: 1440
+onlyBuiltDependencies:
+  - '@swc/core'
+  - '@tailwindcss/oxide'
+  - argon2
+  - electron
+  - esbuild

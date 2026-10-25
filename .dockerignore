@@ -1,0 +1,17 @@
+.git
+.codex
+.agents
+.github
+**/node_modules
+**/dist
+**/out
+**/release
+**/.local
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/*.pem
+**/*.key
+**/*.pfx

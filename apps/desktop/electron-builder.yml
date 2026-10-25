@@ -1,0 +1,30 @@
+appId: org.collels.catalog
+productName: Collel Catalog
+asar: true
+publish:
+  provider: github
+  owner: skyrosid
+  repo: catalog-hevron
+  private: false
+  releaseType: draft
+directories:
+  output: release
+files:
+  - out/**/*
+  - package.json
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+win:
+  target: nsis
+  verifyUpdateCodeSignature: true
+mac:
+  target:
+    - dmg
+    - zip
+  hardenedRuntime: true
+linux:
+  target: AppImage

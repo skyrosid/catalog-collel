@@ -147,3 +147,9 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Desktop distributables and local PostgreSQL development data
+release/
+.local/
+*.pem
+*.key

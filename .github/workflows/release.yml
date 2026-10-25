@@ -1,0 +1,55 @@
+name: Windows release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Desktop package version to release (for example 0.1.0)'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: windows-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Validate release configuration
+        shell: pwsh
+        run: |
+          if (-not $env:API_BASE_URL -or -not $env:API_BASE_URL.StartsWith('https://')) {
+            throw 'Configure the HTTPS API_BASE_URL in the release environment.'
+          }
+          if (-not $env:CSC_LINK -or -not $env:CSC_KEY_PASSWORD) {
+            throw 'Configure the Windows signing certificate secrets before releasing.'
+          }
+          $desktopVersion = (Get-Content apps/desktop/package.json | ConvertFrom-Json).version
+          if ($desktopVersion -ne $env:EXPECTED_VERSION) {
+            throw 'The requested version must match apps/desktop/package.json.'
+          }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Build signed installer and draft GitHub release
+        run: pnpm --filter @catalog/desktop exec electron-builder --config electron-builder.yml --win nsis --publish always -c.forceCodeSigning=true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.blockmap
+            apps/desktop/release/latest.yml
