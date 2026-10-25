@@ -49,6 +49,25 @@ secrets. Le bureau ne connaît que `API_BASE_URL`, valeur publique intégrée au
 
 ## API HTTPS
 
+Pour travailler sur l’API en local avec les external credentials Dokploy,
+conserver l’URL externe dans `apps/api/.env` et utiliser :
+
+```dotenv
+NODE_ENV=development
+HOST=127.0.0.1
+PORT=3000
+DATABASE_TLS=false
+DATABASE_PRIVATE_NETWORK=false
+DATABASE_ALLOW_INSECURE_REMOTE=true
+```
+
+Le bureau local conserve `API_BASE_URL=http://127.0.0.1:3000`. L’option
+`DATABASE_ALLOW_INSECURE_REMOTE` autorise explicitement la connexion PostgreSQL
+distante sans TLS en développement ; elle est refusée dans les autres modes.
+Sur Dokploy, l’API de production conserve l’hôte PostgreSQL interne et
+`DATABASE_PRIVATE_NETWORK=true` si ce réseau privé n’utilise pas TLS.
+Les migrations effectuées depuis le poste local concernent la même base distante.
+
 Terminer TLS sur un proxy de confiance ; aucune ouverture directe du port API sur
 Internet. Les en-têtes de proxy ne sont volontairement pas acceptés par défaut :
 `trustProxy=false`. Derrière un proxy, les limites par IP s’appliqueront initialement

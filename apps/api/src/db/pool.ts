@@ -6,6 +6,7 @@ export interface DatabaseOptions {
   url: string;
   tls: boolean;
   privateNetwork?: boolean;
+  allowInsecureRemote?: boolean;
   caFile?: string;
 }
 
@@ -23,6 +24,7 @@ export function createPool(options: DatabaseOptions) {
   if (
     !options.tls &&
     !options.privateNetwork &&
+    !options.allowInsecureRemote &&
     !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
   ) {
     throw new Error('Remote PostgreSQL connections require verified TLS.');

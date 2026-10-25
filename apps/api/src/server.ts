@@ -1,13 +1,15 @@
+import { buildApp } from './app.js';
+import { createServices } from './auth/service.js';
 import { readConfig } from './config.js';
 import { createPool, verifyRuntimeRole } from './db/pool.js';
-import { createServices } from './auth/service.js';
-import { buildApp } from './app.js';
 
 const config = readConfig();
 const pool = createPool({
   url: config.DATABASE_URL,
   tls: config.DATABASE_TLS === 'true',
   privateNetwork: config.DATABASE_PRIVATE_NETWORK === 'true',
+  allowInsecureRemote:
+    config.NODE_ENV === 'development' && config.DATABASE_ALLOW_INSECURE_REMOTE === 'true',
   ...(config.DATABASE_CA_FILE ? { caFile: config.DATABASE_CA_FILE } : {}),
 });
 pool.on('error', () => {
@@ -26,8 +28,8 @@ try {
     });
   }
   await app.listen({ host: config.HOST, port: config.PORT });
-} catch {
-  console.error('API startup failed. Check the environment, migrations, and database role.');
+} catch (error) {
+  console.error('API startup failed:', error instanceof Error ? error.message : String(error));
   await pool.end();
   process.exitCode = 1;
 }
