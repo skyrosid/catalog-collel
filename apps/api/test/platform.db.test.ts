@@ -27,7 +27,12 @@ beforeAll(async () => {
   await db.exec(
     await readFile(new URL('../../../infra/postgres/provision.sql', import.meta.url), 'utf8'),
   );
-  for (const file of ['001_foundation.sql', '002_platform_administration.sql']) {
+  for (const file of [
+    '001_foundation.sql',
+    '002_platform_administration.sql',
+    '003_delete_collel.sql',
+    '004_optional_admin_password.sql',
+  ]) {
     await db.exec(await readFile(new URL(`../migrations/${file}`, import.meta.url), 'utf8'));
   }
   await db.exec('SET ROLE catalog_app');
@@ -72,13 +77,17 @@ describe('platform onboarding and the two collel identities', () => {
     ).rejects.toThrow('CONFLICT');
     expect((await services.listCollels(platform, { search: '', page: 0 })).total).toBe(2);
   });
-  it('blocks tenant access until the temporary administrator password is changed', async () => {
+  it('allows immediate administrator access and an optional password change', async () => {
     const loggedIn = await services.login(created.credentials.admin, false, 'admin');
     administrator = await services.authenticate(loggedIn.token);
-    expect(administrator.session.user.mustChangePassword).toBe(true);
-    await expect(services.getCollel(administrator, created.collel.id)).rejects.toThrow(
-      'PASSWORD_CHANGE_REQUIRED',
-    );
+    expect(administrator.session.user.mustChangePassword).toBe(false);
+    expect((await services.getCollel(administrator, created.collel.id)).id).toBe(created.collel.id);
+    await expect(
+      services.changePassword(administrator, {
+        currentPassword: 'incorrect-password',
+        newPassword,
+      }),
+    ).rejects.toThrow('INVALID_INPUT');
     const session = await services.changePassword(administrator, {
       currentPassword: created.credentials.admin.password,
       newPassword,
@@ -122,8 +131,11 @@ describe('platform onboarding and the two collel identities', () => {
   it('can reset the administrator without disconnecting library PCs', async () => {
     const reset = await services.resetCollelAdmin(platform, created.collel.id);
     await expect(services.getCollel(administrator, created.collel.id)).rejects.toThrow('FORBIDDEN');
-    expect((await services.login(reset, false, 'admin')).session.user.mustChangePassword).toBe(
-      true,
+    const loggedIn = await services.login(reset, false, 'admin');
+    expect(loggedIn.session.user.mustChangePassword).toBe(false);
+    const resetAdministrator = await services.authenticate(loggedIn.token);
+    expect((await services.getCollel(resetAdministrator, created.collel.id)).id).toBe(
+      created.collel.id,
     );
     expect((await services.resume(activation)).session.memberships[0]?.collelId).toBe(
       created.collel.id,
@@ -179,5 +191,90 @@ describe('platform onboarding and the two collel identities', () => {
     } finally {
       await app.close();
     }
+  });
+  it('requires superadmin confirmation and revokes deleted collel accounts', async () => {
+    const disposable = await services.createCollel(platform, {
+      name: 'Disposable',
+      slug: 'disposable',
+    });
+    const device = await services.activate(disposable.credentials.catalog);
+    const reader = await services.authenticate(device.token);
+    await expect(
+      services.deleteCollel(reader, disposable.collel.id, { slug: 'disposable' }),
+    ).rejects.toThrow('FORBIDDEN');
+    await expect(
+      services.deleteCollel(
+        { ...platform, sessionHash: reader.sessionHash },
+        disposable.collel.id,
+        { slug: 'disposable' },
+      ),
+    ).rejects.toThrow('FORBIDDEN');
+    await expect(
+      services.deleteCollel(platform, disposable.collel.id, { slug: 'wrong' }),
+    ).rejects.toThrow('INVALID_INPUT');
+    await services.deleteCollel(platform, disposable.collel.id, { slug: 'disposable' });
+    await expect(services.resume(device.activationToken)).rejects.toThrow('UNAUTHENTICATED');
+    await expect(services.login(disposable.credentials.admin, false, 'admin')).rejects.toThrow(
+      'UNAUTHENTICATED',
+    );
+    expect((await services.listCollels(platform, { search: 'disposable', page: 0 })).total).toBe(0);
+    expect((await services.listCollels(platform, { search: 'second', page: 0 })).total).toBe(1);
+  });
+  it('preserves an administrator who still belongs to another collel', async () => {
+    const disposable = await services.createCollel(platform, {
+      name: 'Shared identity',
+      slug: 'shared-identity',
+    });
+    const login = await services.login(disposable.credentials.admin, false, 'admin');
+    const actor = await services.authenticate(login.token);
+    await db.exec('RESET ROLE');
+    try {
+      await db.query(
+        "INSERT INTO private.memberships (user_id,collel_id,role) VALUES ($1,$2,'admin')",
+        [actor.session.user.id, other.collel.id],
+      );
+    } finally {
+      await db.exec('SET ROLE catalog_app');
+    }
+    await services.deleteCollel(platform, disposable.collel.id, { slug: 'shared-identity' });
+    expect(
+      (await services.authenticate(login.token)).session.memberships.map(
+        (membership) => membership.collelId,
+      ),
+    ).toEqual([other.collel.id]);
+    expect(
+      (await services.login(disposable.credentials.admin, false, 'admin')).session.memberships[0]
+        ?.collelId,
+    ).toBe(other.collel.id);
+  });
+  it('removes the requirement from existing administrators without changing their credentials', async () => {
+    const existing = await services.createCollel(platform, {
+      name: 'Existing administrator',
+      slug: 'existing-admin',
+    });
+    const loggedIn = await services.login(existing.credentials.admin, false, 'admin');
+    await db.exec('RESET ROLE');
+    try {
+      await db.query('UPDATE private.users SET must_change_password = true WHERE id = $1', [
+        loggedIn.session.user.id,
+      ]);
+      await db.exec(
+        await readFile(
+          new URL('../migrations/004_optional_admin_password.sql', import.meta.url),
+          'utf8',
+        ),
+      );
+    } finally {
+      await db.exec('SET ROLE catalog_app');
+    }
+    const existingSession = await services.authenticate(loggedIn.token);
+    expect(existingSession.session.user.mustChangePassword).toBe(false);
+    expect((await services.getCollel(existingSession, existing.collel.id)).id).toBe(
+      existing.collel.id,
+    );
+    expect(
+      (await services.login(existing.credentials.admin, false, 'admin')).session.user
+        .mustChangePassword,
+    ).toBe(false);
   });
 });

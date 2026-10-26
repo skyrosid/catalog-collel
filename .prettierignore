@@ -5,3 +5,4 @@ release
 coverage
 .local
 pnpm-lock.yaml
+**/electron.vite.config.*-*.mjs

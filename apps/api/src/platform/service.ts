@@ -17,6 +17,7 @@ import type {
   SetupInput,
   SetupStatus,
   UpdateCollelInput,
+  DeleteCollelInput,
 } from '@catalog/contracts';
 import type { Principal } from '../auth/service.js';
 import { AppError } from '../errors.js';
@@ -34,6 +35,7 @@ export interface PlatformServices {
   ): Promise<CollelDirectoryEntry>;
   resetCollelAdmin(principal: Principal, id: string): Promise<GeneratedCredentials>;
   resetCollelAccess(principal: Principal, id: string): Promise<GeneratedCredentials>;
+  deleteCollel(principal: Principal, id: string, input: DeleteCollelInput): Promise<void>;
 }
 
 export function requireSuperadmin(principal: Principal) {
@@ -60,6 +62,8 @@ export function createPlatformServices(pool: pg.Pool, ttlHours: number): Platfor
             throw new AppError(404, 'NOT_FOUND');
           case 'P0401':
             throw new AppError(401, 'UNAUTHENTICATED');
+          case '22023':
+            throw new AppError(400, 'INVALID_INPUT');
         }
       }
       throw error;
@@ -69,6 +73,14 @@ export function createPlatformServices(pool: pg.Pool, ttlHours: number): Platfor
   return {
     async setupStatus() {
       return setupStatusSchema.parse(await query('SELECT app.setup_status() AS value'));
+    },
+    async deleteCollel(principal, id, input) {
+      requireSuperadmin(principal);
+      await query('SELECT app.platform_delete_collel($1, $2, $3) AS value', [
+        principal.sessionHash,
+        id,
+        input.slug,
+      ]);
     },
     async setup(input) {
       // Hash before taking the DB lock; creating identity + session is one atomic statement.

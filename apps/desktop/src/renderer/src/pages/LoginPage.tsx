@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { ArrowLeft, ArrowRight, KeyRound, Monitor } from 'lucide-react';
 import type { Session } from '@catalog/contracts';
 import { texts as t } from '../../../shared/texts';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Field, Notice } from '@/components/forms';
+import { Field, Notice, PasswordField } from '@/components/forms';
+import { LibraryIllustration } from '@/components/library-art';
+import { Card } from '@/components/ui/card';
+import { PageHeader } from '@/components/page-layout';
+import { cn } from '@/lib/utils';
 
 export type LoginMode = 'catalog' | 'admin' | 'platform';
 export function LoginPage({
@@ -16,40 +20,21 @@ export function LoginPage({
   navigate: (mode: LoginMode) => void;
   onSession: (session: Session) => void;
 }) {
-  const [required, setRequired] = useState<boolean | null>(null);
+  const [required, setRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [retry, setRetry] = useState(0);
-  useEffect(() => {
-    if (mode !== 'platform') return;
-    let alive = true;
-    void window.catalog
-      .setupStatus()
-      .then((result) => {
-        if (!alive) return;
-        if (result.ok) {
-          setRequired(result.data.required);
-          setError(null);
-        } else setError(t.errors[result.error]);
-      })
-      .catch(() => {
-        if (alive) setError(t.errors.UNAVAILABLE);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [mode, retry]);
   const setup = mode === 'platform' && required === true;
-  const loading = mode === 'platform' && required === null;
-  const title = setup
-    ? t.setupTitle
-    : mode === 'platform'
-      ? t.platformAccess
+  const title = setup ? t.setupTitle : mode === 'platform' ? t.platformAccess : t.signIn;
+  const description = setup
+    ? t.setupDescription
+    : mode === 'catalog'
+      ? t.activationDescription
       : mode === 'admin'
-        ? t.administration
-        : t.catalogAccess;
+        ? t.adminDescription
+        : t.interface.platformDescription;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const input = { login: String(data.get('login')), password: String(data.get('password')) };
@@ -60,6 +45,17 @@ export function LoginPage({
     setBusy(true);
     setError(null);
     try {
+      if (mode === 'platform' && !setup) {
+        const status = await window.catalog.setupStatus();
+        if (!status.ok) {
+          setError(t.errors[status.error]);
+          return;
+        }
+        if (status.data.required) {
+          setRequired(true);
+          return;
+        }
+      }
       const result = await (setup
         ? window.catalog.setup(input)
         : mode === 'platform'
@@ -68,10 +64,13 @@ export function LoginPage({
             ? window.catalog.login(input)
             : window.catalog.activate(input));
       form.reset();
-      if (result.ok) onSession(result.data);
-      else {
+      if (result.ok) {
+        onSession(result.data);
+      } else {
         setError(t.errors[result.error]);
-        if (result.error === 'SETUP_COMPLETE') setRequired(false);
+        if (result.error === 'SETUP_COMPLETE') {
+          setRequired(false);
+        }
       }
     } catch {
       setError(t.errors.UNAVAILABLE);
@@ -80,108 +79,111 @@ export function LoginPage({
     }
   }
   return (
-    <div className="mx-auto w-full max-w-md space-y-7 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">{title}</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {setup
-              ? t.setupDescription
-              : mode === 'catalog'
-                ? t.activationDescription
-                : t.adminDescription}
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {error && <Notice>{error}</Notice>}
-          {loading ? (
-            <div className="space-y-3">
-              <p>{t.loading}</p>
-              <Button variant="outline" onClick={() => setRetry((value) => value + 1)}>
-                {t.retry}
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={(event) => void submit(event)} className="space-y-5" aria-busy={busy}>
-              <Field
-                label={t.login}
-                name="login"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                minLength={3}
-                maxLength={254}
-                required
-                disabled={busy}
-                dir="auto"
-              />
-              <Field
-                label={t.password}
-                name="password"
-                type="password"
-                autoComplete={setup ? 'new-password' : 'current-password'}
-                minLength={setup ? 15 : 1}
-                maxLength={128}
-                required
-                disabled={busy}
-                dir="auto"
-              />
-              {setup && (
-                <>
-                  <p className="text-xs text-muted-foreground">{t.passwordHint}</p>
-                  <Field
-                    label={t.confirmPassword}
-                    name="confirm"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={15}
-                    maxLength={128}
-                    required
+    <Card className="mx-auto my-auto w-full max-w-4xl overflow-hidden">
+      <div className="grid md:grid-cols-2">
+        <section className="space-y-6 p-6 sm:p-8">
+          <PageHeader title={title} />
+          {mode !== 'platform' && (
+            <nav
+              aria-label={t.signIn}
+              className="grid grid-cols-2 gap-1 rounded-lg border bg-background p-1"
+            >
+              {(['catalog', 'admin'] as const).map((value) => {
+                const Icon = value === 'catalog' ? Monitor : KeyRound;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-current={mode === value ? 'page' : undefined}
+                    className={cn(
+                      'flex h-10 items-center justify-center gap-2 rounded-md border text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+                      mode === value
+                        ? 'border-border bg-card font-medium text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground',
+                    )}
                     disabled={busy}
-                  />
-                </>
-              )}
-              <Button type="submit" className="w-full" disabled={busy}>
-                {busy
-                  ? t.pending
-                  : setup
-                    ? t.setupSubmit
-                    : mode === 'catalog'
-                      ? t.activate
-                      : t.submit}
-              </Button>
-            </form>
+                    onClick={() => navigate(value)}
+                  >
+                    <Icon className="size-4" aria-hidden="true" />
+                    {value === 'catalog' ? t.interface.catalogRole : t.interface.libraryRole}
+                  </button>
+                );
+              })}
+            </nav>
           )}
-          <div className="flex flex-wrap justify-center gap-3 border-t pt-4">
-            {mode !== 'catalog' && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() => navigate('catalog')}
-              >
-                {t.back}
-              </Button>
+          {description && <p className="text-sm leading-6 text-muted-foreground">{description}</p>}
+          <form onSubmit={(event) => void submit(event)} className="space-y-5" aria-busy={busy}>
+            {error && <Notice>{error}</Notice>}
+            <Field
+              label={t.login}
+              name="login"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              minLength={3}
+              maxLength={254}
+              required
+              disabled={busy}
+              dir="ltr"
+            />
+            <PasswordField
+              label={t.password}
+              {...(setup ? { hint: t.passwordHint } : {})}
+              name="password"
+              autoComplete={setup ? 'new-password' : 'current-password'}
+              minLength={setup ? 15 : 1}
+              maxLength={128}
+              required
+              disabled={busy}
+            />
+            {setup && (
+              <>
+                <PasswordField
+                  label={t.confirmPassword}
+                  name="confirm"
+                  autoComplete="new-password"
+                  minLength={15}
+                  maxLength={128}
+                  required
+                  disabled={busy}
+                />
+              </>
             )}
-            {mode === 'catalog' && (
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => navigate('admin')}>
-                {t.administration}
-              </Button>
-            )}
-            {mode !== 'platform' && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() => navigate('platform')}
-              >
-                {t.platformAccess}
-              </Button>
-            )}
+            <Button type="submit" className="w-full" disabled={busy}>
+              {busy
+                ? t.pending
+                : setup
+                  ? t.setupSubmit
+                  : mode === 'catalog'
+                    ? t.activate
+                    : t.submit}
+              <ArrowLeft aria-hidden="true" />
+            </Button>
+          </form>
+          <div className="flex justify-center border-t pt-5">
+            <Button
+              type="button"
+              size="sm"
+              variant="link"
+              className="h-auto p-0 text-muted-foreground"
+              disabled={busy}
+              onClick={() => navigate(mode === 'platform' ? 'catalog' : 'platform')}
+            >
+              {mode === 'platform' && <ArrowRight aria-hidden="true" />}
+              {mode === 'platform' ? t.back : t.platformAccess}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </section>
+        <figure className="hidden flex-col items-center justify-center gap-6 border-s border-sidebar bg-sidebar p-8 md:flex">
+          <LibraryIllustration className="w-full max-w-sm" />
+          <figcaption className="space-y-3 text-center">
+            <p className="font-display text-2xl font-bold text-sidebar-foreground">
+              {t.interface.homeTitle}
+            </p>
+            <p className="text-sm leading-6 text-sidebar-muted">{t.interface.libraryCaption}</p>
+          </figcaption>
+        </figure>
+      </div>
+    </Card>
   );
 }

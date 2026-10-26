@@ -5,7 +5,10 @@ export function Card({ className, ...props }: React.ComponentProps<'section'>) {
   return (
     <section
       data-slot="card"
-      className={cn('rounded-xl border bg-card text-card-foreground shadow-sm', className)}
+      className={cn(
+        'rounded-xl border bg-card text-card-foreground shadow-[0_2px_8px_#382e2605]',
+        className,
+      )}
       {...props}
     />
   );

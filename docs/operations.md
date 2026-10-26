@@ -88,6 +88,17 @@ un journal d’audit lors de leur implémentation.
 
 ## État de livraison
 
+La migration `004_optional_admin_password.sql` rend le changement de mot de passe
+facultatif pour les administrateurs de collels, y compris après une réinitialisation.
+Elle retire aussi cette obligation aux comptes existants, sans changer leurs mots
+de passe ni fermer leurs sessions. Le changement volontaire reste accessible depuis
+le menu du compte.
+
+La migration `003_delete_collel.sql` ajoute la suppression définitive depuis la
+plateforme, réservée au super administrateur. L’interface exige de ressaisir
+l’identifiant du collel avant confirmation. Ses activations et ses comptes propres
+sont supprimés ; les identités encore autorisées dans un autre collel sont conservées.
+
 Le dépôt contient une application compilable, une API, les migrations, un outil
 de bootstrap et les tests. Aucun serveur ni compte cloud n’a été configuré, aucune
 base réelle n’a reçu de migration. Le pipeline CI est défini et sera exécuté après

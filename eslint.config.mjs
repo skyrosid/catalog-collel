@@ -4,7 +4,16 @@ import hooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-config-prettier';
 
 export default ts.config(
-  { ignores: ['**/dist/**', '**/out/**', '**/release/**', '**/node_modules/**', '**/.local/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/out/**',
+      '**/release/**',
+      '**/node_modules/**',
+      '**/.local/**',
+      '**/electron.vite.config.*-*.mjs',
+    ],
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   {

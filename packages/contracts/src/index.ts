@@ -57,6 +57,11 @@ export const updateCollelRequestSchema = z.strictObject({
   id: idSchema,
   input: updateCollelSchema,
 });
+export const deleteCollelSchema = z.strictObject({ slug: createCollelSchema.shape.slug });
+export const deleteCollelRequestSchema = z.strictObject({
+  id: idSchema,
+  input: deleteCollelSchema,
+});
 export const collelDirectoryEntrySchema = updateCollelSchema.extend({
   id: idSchema,
   admin: z.strictObject({ login: z.string(), displayName: z.string() }),
@@ -108,6 +113,7 @@ export type SetupStatus = z.infer<typeof setupStatusSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type CreateCollelInput = z.infer<typeof createCollelSchema>;
 export type UpdateCollelInput = z.infer<typeof updateCollelSchema>;
+export type DeleteCollelInput = z.infer<typeof deleteCollelSchema>;
 export type CollelDirectoryEntry = z.infer<typeof collelDirectoryEntrySchema>;
 export type CollelDirectory = z.infer<typeof collelDirectorySchema>;
 export type DirectoryQuery = z.infer<typeof directoryQuerySchema>;
@@ -130,6 +136,7 @@ export interface DesktopApi {
   listCollels(query: DirectoryQuery): Promise<Result<CollelDirectory>>;
   createCollel(input: CreateCollelInput): Promise<Result<CreatedCollel>>;
   updateCollel(id: string, input: UpdateCollelInput): Promise<Result<CollelDirectoryEntry>>;
+  deleteCollel(id: string, input: DeleteCollelInput): Promise<Result<null>>;
   resetCollelAdmin(id: string): Promise<Result<GeneratedCredentials>>;
   resetCollelAccess(id: string): Promise<Result<GeneratedCredentials>>;
 }

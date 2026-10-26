@@ -11,6 +11,7 @@ import {
   loginSchema,
   setupInputSchema,
   updateCollelSchema,
+  deleteCollelSchema,
 } from '@catalog/contracts';
 import { AppError } from './errors.js';
 import type { Services } from './auth/service.js';
@@ -158,6 +159,17 @@ export function buildApp(services: Services, logging = true) {
         idSchema.parse(request.params.id),
         updateCollelSchema.parse(request.body),
       ),
+    );
+    routes.delete<{ Params: { id: string } }>(
+      '/v1/platform/collels/:id',
+      async (request, reply) => {
+        await services.deleteCollel(
+          await principal(request.headers.authorization),
+          idSchema.parse(request.params.id),
+          deleteCollelSchema.parse(request.body),
+        );
+        return reply.code(204).send();
+      },
     );
     routes.post<{ Params: { id: string } }>(
       '/v1/platform/collels/:id/reset-admin',

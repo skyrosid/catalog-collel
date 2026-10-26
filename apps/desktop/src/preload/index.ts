@@ -15,6 +15,7 @@ const bridge: DesktopApi = {
   listCollels: (query) => ipcRenderer.invoke('platform:list', query),
   createCollel: (input) => ipcRenderer.invoke('platform:create', input),
   updateCollel: (id, input) => ipcRenderer.invoke('platform:update', { id, input }),
+  deleteCollel: (id, input) => ipcRenderer.invoke('platform:delete', { id, input }),
   resetCollelAdmin: (id) => ipcRenderer.invoke('platform:reset-admin', id),
   resetCollelAccess: (id) => ipcRenderer.invoke('platform:reset-access', id),
 };

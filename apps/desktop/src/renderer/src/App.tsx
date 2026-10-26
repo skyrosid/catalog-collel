@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@catalog/contracts';
 import { texts as t } from '../../shared/texts';
-import { Button } from '@/components/ui/button';
-import { Confirmation, Notice } from '@/components/forms';
+import { Confirmation, Loading, Notice } from '@/components/forms';
+import { AppHeader } from '@/components/app-header';
 import { LoginPage } from './pages/LoginPage';
 import type { LoginMode } from './pages/LoginPage';
 import { PasswordPage } from './pages/PasswordPage';
@@ -101,78 +101,49 @@ export function App() {
     }
   }
   const superadmin = session?.user.platformRole === 'super_admin';
-  const administrator =
-    superadmin || session?.memberships.some((membership) => membership.role === 'admin');
+  const passwordRequired = superadmin && session.user.mustChangePassword;
   return (
-    <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-7 sm:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b pb-5">
-        <div>
-          <p className="font-semibold tracking-wide">{t.brand}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t.subtitle}</p>
-        </div>
-        {session && (
-          <nav className="flex flex-wrap gap-2" aria-label={t.administration}>
-            {administrator ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => setPasswordPage(true)}
-                >
-                  {t.changePassword}
-                </Button>
-                <Button variant="outline" size="sm" disabled={busy} onClick={() => void logout()}>
-                  {t.logout}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" size="sm" onClick={() => navigate('admin')}>
-                  {t.administration}
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('platform')}>
-                  {t.platformAccess}
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setDisconnect(true)}>
-                  {t.deactivate}
-                </Button>
-              </>
-            )}
-          </nav>
+    <div className="flex min-h-screen flex-col">
+      <AppHeader
+        session={session}
+        busy={busy}
+        onPassword={() => setPasswordPage(true)}
+        onLogout={() => void logout()}
+        onNavigate={navigate}
+        onDeactivate={() => setDisconnect(true)}
+      />
+      <main className="app-container flex flex-1 flex-col py-8">
+        {error && (
+          <div className="mb-6">
+            <Notice>{error}</Notice>
+          </div>
         )}
-      </header>
-      {error && (
-        <div className="mt-6">
-          <Notice>{error}</Notice>
-        </div>
-      )}
-      {!ready ? (
-        <p role="status" className="py-12">
-          {t.loading}
-        </p>
-      ) : !session ? (
-        <LoginPage key={mode} mode={mode} navigate={navigate} onSession={receive} />
-      ) : session.user.mustChangePassword || passwordPage ? (
-        <PasswordPage
-          required={session.user.mustChangePassword}
-          onSession={receive}
-          onCancel={() => setPasswordPage(false)}
-        />
-      ) : superadmin ? (
-        <PlatformDashboard onExpired={expired} />
-      ) : (
-        <TenantHome key={session.user.id} session={session} onExpired={expired} />
-      )}
+        {!ready ? (
+          <Loading />
+        ) : !session ? (
+          <LoginPage key={mode} mode={mode} navigate={navigate} onSession={receive} />
+        ) : passwordRequired || passwordPage ? (
+          <PasswordPage
+            required={passwordRequired}
+            onSession={receive}
+            onCancel={() => setPasswordPage(false)}
+          />
+        ) : superadmin ? (
+          <PlatformDashboard onExpired={expired} />
+        ) : (
+          <TenantHome key={session.user.id} session={session} onExpired={expired} />
+        )}
+      </main>
       {disconnect && (
         <Confirmation
           title={t.deactivate}
           description={t.deactivateWarning}
           busy={busy}
+          destructive
           onConfirm={() => void deactivate()}
           onClose={() => setDisconnect(false)}
         />
       )}
-    </main>
+    </div>
   );
 }

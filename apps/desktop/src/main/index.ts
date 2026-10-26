@@ -10,6 +10,7 @@ import {
   createCollelSchema,
   directoryQuerySchema,
   updateCollelRequestSchema,
+  deleteCollelRequestSchema,
 } from '@catalog/contracts';
 import type { Result } from '@catalog/contracts';
 import { createApiClient, validateApiUrl } from './api-client.js';
@@ -127,6 +128,10 @@ void app
     });
     handle('platform:reset-admin', (value) => api.resetCollelAdmin(idSchema.parse(value)));
     handle('platform:reset-access', (value) => api.resetCollelAccess(idSchema.parse(value)));
+    handle('platform:delete', (value) => {
+      const request = deleteCollelRequestSchema.parse(value);
+      return api.deleteCollel(request.id, request.input);
+    });
     createWindow();
     startUpdates(() => window);
     app.on('activate', () => {

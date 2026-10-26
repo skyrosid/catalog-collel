@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
+import { BookOpen, Check, ChevronDown } from 'lucide-react';
 import type { Collel, Session } from '@catalog/contracts';
 import { texts as t } from '../../../shared/texts';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Notice } from '@/components/forms';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loading, Notice } from '@/components/forms';
+import { EmptyState, PageHeader } from '@/components/page-layout';
 
 export function TenantHome({ session, onExpired }: { session: Session; onExpired: () => void }) {
   const [id, setId] = useState(session.memberships[0]?.collelId ?? '');
@@ -30,42 +33,61 @@ export function TenantHome({ session, onExpired }: { session: Session; onExpired
     };
   }, [id, onExpired]);
   return (
-    <Card className="mx-auto my-12 w-full max-w-xl">
-      <CardHeader>
-        <h1 className="text-2xl font-semibold">
-          <bdi>{collel?.name ?? member?.name}</bdi>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {member?.role === 'admin' ? t.administration : t.activated}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {error && <Notice>{error}</Notice>}
-        {session.memberships.length > 1 && (
-          <label className="block space-y-2 text-sm">
-            <span>{t.select}</span>
-            <select
-              value={id}
-              onChange={(event) => {
-                setId(event.target.value);
-                setCollel(null);
-                setError(null);
-              }}
-              className="h-10 w-full rounded-md border bg-background px-3"
-            >
-              {session.memberships.map((membership) => (
-                <option key={membership.collelId} value={membership.collelId}>
-                  {membership.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <div className="rounded-md bg-muted p-4 text-sm" role="status">
-          {collel ? (member?.role === 'admin' ? t.adminReady : t.connected) : t.checking}
+    <div className="space-y-6">
+      <PageHeader
+        title={<bdi>{collel?.name ?? member?.name}</bdi>}
+        description={member?.role === 'admin' ? t.administration : t.interface.library}
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          {session.memberships.length > 1 && (
+            <label className="flex items-center gap-3 text-sm">
+              <span className="text-muted-foreground">{t.select}</span>
+              <span className="relative">
+                <select
+                  value={id}
+                  onChange={(event) => {
+                    setId(event.target.value);
+                    setCollel(null);
+                    setError(null);
+                  }}
+                  className="h-10 max-w-64 appearance-none rounded-lg border border-input bg-card pe-9 ps-3 text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {session.memberships.map((membership) => (
+                    <option key={membership.collelId} value={membership.collelId}>
+                      {membership.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute end-3 top-3 size-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </span>
+            </label>
+          )}
+          {collel && (
+            <Badge tone="success">
+              <Check aria-hidden="true" />
+              {t.connected}
+            </Badge>
+          )}
         </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">{t.foundation}</p>
-      </CardContent>
-    </Card>
+      </PageHeader>
+      {error ? (
+        <Notice>{error}</Notice>
+      ) : (
+        <Card>
+          {collel ? (
+            <EmptyState
+              icon={BookOpen}
+              title={t.interface.catalogEmptyTitle}
+              description={t.interface.catalogEmptyDescription}
+            />
+          ) : (
+            <Loading />
+          )}
+        </Card>
+      )}
+    </div>
   );
 }

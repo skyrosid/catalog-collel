@@ -101,7 +101,8 @@ export async function createServices(pool: pg.Pool, ttlHours: number): Promise<S
       );
       const currentHash = result.rows[0]?.value;
       if (!currentHash) throw new AppError(401, 'UNAUTHENTICATED');
-      if (!(await verifyPassword(currentHash, input.currentPassword))) throw new AppError(400, 'INVALID_INPUT');
+      if (!(await verifyPassword(currentHash, input.currentPassword)))
+        throw new AppError(400, 'INVALID_INPUT');
       try {
         await pool.query('SELECT app.change_password($1, $2, $3)', [
           principal.sessionHash,

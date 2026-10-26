@@ -19,6 +19,7 @@ const principal: Principal = {
 };
 const services: Services = {
   setupStatus: vi.fn(),
+  deleteCollel: vi.fn(),
   setup: vi.fn(),
   listCollels: vi.fn(),
   createCollel: vi.fn(),

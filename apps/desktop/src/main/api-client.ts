@@ -247,6 +247,13 @@ export function createApiClient(
           { method: 'POST' },
         ),
       ),
+    deleteCollel: (id, input) =>
+      result(() =>
+        request(`/v1/platform/collels/${encodeURIComponent(id)}`, z.null(), {
+          method: 'DELETE',
+          body: JSON.stringify(input),
+        }),
+      ),
     resetCollelAccess: (id) =>
       result(() =>
         request(

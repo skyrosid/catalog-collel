@@ -153,3 +153,4 @@ release/
 .local/
 *.pem
 *.key
+**/electron.vite.config.*-*.mjs

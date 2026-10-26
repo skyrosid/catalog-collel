@@ -4,7 +4,8 @@ import type { Session } from '@catalog/contracts';
 import { texts as t } from '../../../shared/texts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Field, Notice } from '@/components/forms';
+import { FormActions, PasswordField, Notice } from '@/components/forms';
+import { PageHeader } from '@/components/page-layout';
 
 export function PasswordPage({
   onSession,
@@ -43,58 +44,51 @@ export function PasswordPage({
     }
   }
   return (
-    <Card className="mx-auto my-12 w-full max-w-md">
+    <Card className="mx-auto my-auto w-full max-w-md">
       <CardHeader>
-        <h1 className="text-xl font-semibold">{t.changePassword}</h1>
-        {required && <p className="text-sm text-muted-foreground">{t.changePasswordDescription}</p>}
+        <PageHeader
+          title={t.changePassword}
+          {...(required ? { description: t.changePasswordDescription } : {})}
+        />
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={(event) => void submit(event)} aria-busy={busy}>
           {error && <Notice>{error}</Notice>}
-          <Field
+          <PasswordField
             label={t.currentPassword}
             name="current"
-            type="password"
             autoComplete="current-password"
             required
             maxLength={128}
             disabled={busy}
           />
-          <Field
+          <PasswordField
             label={t.newPassword}
+            hint={t.passwordHint}
             name="password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={15}
             maxLength={128}
             disabled={busy}
           />
-          <Field
+          <PasswordField
             label={t.confirmPassword}
             name="confirm"
-            type="password"
             autoComplete="new-password"
             required
             minLength={15}
             maxLength={128}
             disabled={busy}
           />
-          <p className="text-xs text-muted-foreground">{t.passwordHint}</p>
-          <Button className="w-full" disabled={busy}>
-            {busy ? t.saving : t.save}
-          </Button>
-          {!required && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              disabled={busy}
-              onClick={onCancel}
-            >
-              {t.cancel}
-            </Button>
-          )}
+          <FormActions>
+            {!required && (
+              <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>
+                {t.cancel}
+              </Button>
+            )}
+            <Button disabled={busy}>{busy ? t.saving : t.save}</Button>
+          </FormActions>
         </form>
       </CardContent>
     </Card>
