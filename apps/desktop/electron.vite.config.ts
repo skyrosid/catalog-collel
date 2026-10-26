@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
       define: { __API_BASE_URL__: JSON.stringify(apiUrl) },
       build: {
         externalizeDeps: false,
-        rollupOptions: { external: ['electron-updater'] },
+        rollupOptions: { external: ['electron-updater', 'exceljs'] },
       },
     },
     preload: {

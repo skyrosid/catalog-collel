@@ -10,13 +10,15 @@ import type { PlatformServices } from '../platform/service.js';
 import type { ChangePasswordInput } from '@catalog/contracts';
 import { createDeviceServices } from './devices.js';
 import type { DeviceServices } from './devices.js';
+import { createCatalogServices } from '../catalog/service.js';
+import type { CatalogServices } from '../catalog/service.js';
 
 export interface Principal {
   sessionHash: string;
   session: Session;
 }
 
-export interface Services extends PlatformServices, DeviceServices {
+export interface Services extends PlatformServices, DeviceServices, CatalogServices {
   login(
     input: LoginInput,
     platform?: boolean,
@@ -57,6 +59,7 @@ export async function createServices(pool: pg.Pool, ttlHours: number): Promise<S
   }
 
   const services: Services = {
+    ...createCatalogServices(pool),
     ...createPlatformServices(pool, ttlHours),
     ...createDeviceServices(pool, ttlHours, (input) => services.login(input, false, 'user')),
     async login(input, platform = false, role) {

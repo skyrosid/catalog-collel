@@ -12,6 +12,13 @@ import {
   setupInputSchema,
   updateCollelSchema,
   deleteCollelSchema,
+  bookInputSchema,
+  bookReferenceSchema,
+  catalogQuerySchema,
+  importBooksSchema,
+  moveBooksSchema,
+  bulkBooksSchema,
+  updateBookSchema,
 } from '@catalog/contracts';
 import { AppError } from './errors.js';
 import type { Services } from './auth/service.js';
@@ -197,6 +204,99 @@ export function buildApp(services: Services, logging = true) {
       const actor = await principal(request.headers.authorization);
       return services.getCollel(actor, idSchema.parse(request.params.collelId));
     });
+    routes.get<{ Params: { collelId: string }; Querystring: Record<string, string> }>(
+      '/v1/collels/:collelId/books',
+      async (request) => {
+        const actor = await principal(request.headers.authorization);
+        const raw = request.query;
+        const query = catalogQuerySchema.parse({
+          ...raw,
+          page: raw.page === undefined ? 0 : Number(raw.page),
+          pageSize: raw.pageSize === undefined ? 12 : Number(raw.pageSize),
+        });
+        return services.listBooks(actor, idSchema.parse(request.params.collelId), query);
+      },
+    );
+    routes.get<{ Params: { collelId: string; id: string } }>(
+      '/v1/collels/:collelId/books/:id',
+      async (request) =>
+        services.getBook(
+          await principal(request.headers.authorization),
+          idSchema.parse(request.params.collelId),
+          idSchema.parse(request.params.id),
+        ),
+    );
+    routes.post<{ Params: { collelId: string } }>(
+      '/v1/collels/:collelId/books',
+      async (request, reply) => {
+        const actor = await principal(request.headers.authorization);
+        return reply
+          .code(201)
+          .send(
+            await services.createBook(
+              actor,
+              idSchema.parse(request.params.collelId),
+              bookInputSchema.parse(request.body),
+            ),
+          );
+      },
+    );
+    routes.patch<{ Params: { collelId: string; id: string } }>(
+      '/v1/collels/:collelId/books/:id',
+      async (request) =>
+        services.updateBook(
+          await principal(request.headers.authorization),
+          idSchema.parse(request.params.collelId),
+          idSchema.parse(request.params.id),
+          updateBookSchema.parse(request.body),
+        ),
+    );
+    routes.delete<{ Params: { collelId: string; id: string } }>(
+      '/v1/collels/:collelId/books/:id',
+      async (request, reply) => {
+        await services.deleteBook(
+          await principal(request.headers.authorization),
+          idSchema.parse(request.params.collelId),
+          bookReferenceSchema.parse({ ...(request.body as object), id: request.params.id }),
+        );
+        return reply.code(204).send();
+      },
+    );
+    routes.post<{ Params: { collelId: string } }>(
+      '/v1/collels/:collelId/books/move',
+      async (request, reply) => {
+        await services.moveBooks(
+          await principal(request.headers.authorization),
+          idSchema.parse(request.params.collelId),
+          moveBooksSchema.parse(request.body),
+        );
+        return reply.code(204).send();
+      },
+    );
+    routes.post<{ Params: { collelId: string } }>(
+      '/v1/collels/:collelId/books/bulk',
+      { bodyLimit: 16384 },
+      async (request, reply) => {
+        await services.bulkBooks(
+          await principal(request.headers.authorization),
+          idSchema.parse(request.params.collelId),
+          bulkBooksSchema.parse(request.body),
+        );
+        return reply.code(204).send();
+      },
+    );
+    routes.post<{ Params: { collelId: string } }>(
+      '/v1/collels/:collelId/books/import',
+      { bodyLimit: 32 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+      async (request) => {
+        const actor = await principal(request.headers.authorization);
+        return services.importBooks(
+          actor,
+          idSchema.parse(request.params.collelId),
+          importBooksSchema.parse(request.body).books,
+        );
+      },
+    );
   });
   return app;
 }

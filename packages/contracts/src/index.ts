@@ -1,4 +1,17 @@
 import { z } from 'zod';
+import type {
+  Book,
+  BookDirectory,
+  BookInput,
+  BookReference,
+  BulkBooksInput,
+  CatalogQuery,
+  ImportPreview,
+  ImportSummary,
+  MoveBooksInput,
+  UpdateBookInput,
+} from './catalog.js';
+export * from './catalog.js';
 
 export const roleSchema = z.enum(['admin', 'user']);
 export const idSchema = z.uuid();
@@ -123,6 +136,16 @@ export type Result<T> = { ok: true; data: T } | { ok: false; error: ErrorCode };
 
 // Only these capabilities cross the isolated Electron bridge. Tokens never do.
 export interface DesktopApi {
+  listBooks(collelId: string, query: CatalogQuery): Promise<Result<BookDirectory>>;
+  getBook(collelId: string, id: string): Promise<Result<Book>>;
+  createBook(collelId: string, input: BookInput): Promise<Result<Book>>;
+  updateBook(collelId: string, id: string, input: UpdateBookInput): Promise<Result<Book>>;
+  deleteBook(collelId: string, book: BookReference): Promise<Result<null>>;
+  moveBooks(collelId: string, input: MoveBooksInput): Promise<Result<null>>;
+  bulkBooks(collelId: string, input: BulkBooksInput): Promise<Result<null>>;
+  importBooks(collelId: string, books: BookInput[]): Promise<Result<ImportSummary>>;
+  chooseBookImport(collelId: string): Promise<Result<ImportPreview | null>>;
+  saveBookTemplate(collelId: string): Promise<Result<null>>;
   login(input: LoginInput): Promise<Result<Session>>;
   activate(input: LoginInput): Promise<Result<Session>>;
   deactivate(): Promise<Result<null>>;

@@ -45,18 +45,23 @@ export function AppHeader({
       ? t.interface.libraryRole
       : t.interface.catalogRole;
   return (
-    <header className="h-18 shrink-0 border-b bg-card">
+    <header className="app-header h-18 shrink-0 border-b bg-card">
       <div className="app-container flex h-full items-center justify-between gap-4">
-        <div className="flex shrink-0 items-center gap-2.5 text-primary">
-          <LibraryMark className="size-9" />
-          <p className="font-display text-xl font-bold">{t.brand}</p>
+        <div className="app-brand flex shrink-0 items-center gap-3 text-primary">
+          <span className="app-brand-mark">
+            <LibraryMark className="size-10" />
+          </span>
+          <div>
+            <p className="font-display text-2xl font-semibold">{t.brand}</p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">{t.catalog.libraryEyebrow}</p>
+          </div>
         </div>
         {session && (
           <DropdownMenu dir="rtl">
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="gap-2 px-2"
+                className="account-trigger gap-2 px-3"
                 aria-label={t.interface.account}
                 disabled={busy}
               >

@@ -1,9 +1,12 @@
 # Catalog Hevron
 
-Fondations d’une application de bureau de gestion des bibliothèques de collels.
+Application de bureau de gestion des bibliothèques de collels.
 Le premier établissement sera le Collel Hevron ; les comptes et autorisations sont
-conçus pour plusieurs établissements dès cette version. Aucune gestion d’ouvrages,
-de prêts ou de lecteurs n’est encore implémentée.
+conçus pour plusieurs établissements. Le catalogue comprend la consultation en
+livret, la recherche, les fiches, la gestion administrative et l’import Excel.
+Les prêts et les lecteurs ne sont pas encore implémentés.
+
+Voir [le fonctionnement du catalogue et le format Excel](docs/catalogue.md).
 
 ## Choix techniques
 
@@ -134,10 +137,9 @@ Pour votre serveur, suivre [le guide Dokploy](docs/dokploy.md).
    configurer sauvegardes, supervision, secrets et restauration, puis créer Hevron.
 2. Ajouter l’administration des utilisateurs, invitations, réinitialisation des mots
    de passe et journal d’audit, en conservant les invariants d’autorisation.
-3. Définir le modèle métier du catalogue ; chaque table propre à un collel devra
-   utiliser `collel_id`, des relations tenant compte du collel et des politiques RLS.
-4. Implémenter ensuite les ouvrages et la recherche, avec revue des textes hébreux
-   et des parcours RTL par les futurs utilisateurs.
+3. Étendre le catalogue aux prêts et aux lecteurs en conservant l’isolation par
+   `collel_id` et les politiques RLS.
+4. Faire relire les textes hébreux et valider les parcours RTL par les utilisateurs.
 5. Valider les accès concurrents et l’installation réelle, puis signer et distribuer
    l’application avec une stratégie de mise à jour de sécurité.
 

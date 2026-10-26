@@ -1,6 +1,8 @@
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { app, BrowserWindow, ipcMain, net, protocol, session } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, protocol, session } from 'electron';
+import { readFile, stat, writeFile } from 'node:fs/promises';
+import { z } from 'zod';
 import type { IpcMainInvokeEvent } from 'electron';
 import {
   idSchema,
@@ -11,6 +13,13 @@ import {
   directoryQuerySchema,
   updateCollelRequestSchema,
   deleteCollelRequestSchema,
+  bookInputSchema,
+  bookReferenceSchema,
+  catalogQuerySchema,
+  importBooksSchema,
+  moveBooksSchema,
+  bulkBooksSchema,
+  updateBookSchema,
 } from '@catalog/contracts';
 import type { Result } from '@catalog/contracts';
 import { createApiClient, validateApiUrl } from './api-client.js';
@@ -18,6 +27,7 @@ import { productionCsp, rendererFile } from './security.js';
 import { texts } from '../shared/texts.js';
 import { startUpdates } from './updates.js';
 import { createActivationStore } from './activation-store.js';
+import { bookTemplate, parseBookWorkbook } from './catalog-files.js';
 
 declare const __API_BASE_URL__: string;
 const directory = path.dirname(fileURLToPath(import.meta.url));
@@ -116,6 +126,80 @@ void app
     handle('auth:logout', () => api.logout());
     handle('auth:session', () => api.session());
     handle('collel:read', (value) => api.collel(idSchema.parse(value)));
+    const tenant = z.strictObject({ collelId: idSchema });
+    const bookRequest = tenant.extend({ id: idSchema });
+    handle('books:list', (value) => {
+      const input = tenant.extend({ query: catalogQuerySchema }).parse(value);
+      return api.listBooks(input.collelId, input.query);
+    });
+    handle('books:read', (value) => {
+      const input = bookRequest.parse(value);
+      return api.getBook(input.collelId, input.id);
+    });
+    handle('books:create', (value) => {
+      const input = tenant.extend({ input: bookInputSchema }).parse(value);
+      return api.createBook(input.collelId, input.input);
+    });
+    handle('books:update', (value) => {
+      const input = bookRequest.extend({ input: updateBookSchema }).parse(value);
+      return api.updateBook(input.collelId, input.id, input.input);
+    });
+    handle('books:delete', (value) => {
+      const input = tenant.extend({ book: bookReferenceSchema }).parse(value);
+      return api.deleteBook(input.collelId, input.book);
+    });
+    handle('books:move', (value) => {
+      const input = tenant.extend({ input: moveBooksSchema }).parse(value);
+      return api.moveBooks(input.collelId, input.input);
+    });
+    handle('books:bulk', (value) => {
+      const input = tenant.extend({ input: bulkBooksSchema }).parse(value);
+      return api.bulkBooks(input.collelId, input.input);
+    });
+    handle('books:import', (value) => {
+      const input = tenant.extend(importBooksSchema.shape).parse(value);
+      return api.importBooks(input.collelId, input.books);
+    });
+    async function canManage(collelId: string): Promise<Result<null>> {
+      const current = await api.session();
+      if (!current.ok) return current;
+      if (!current.data) return { ok: false, error: 'UNAUTHENTICATED' };
+      if (
+        !current.data.memberships.some(
+          (member) => member.collelId === collelId && member.role === 'admin',
+        )
+      )
+        return { ok: false, error: 'FORBIDDEN' };
+      return { ok: true, data: null };
+    }
+    handle('books:choose-import', async (value) => {
+      const collelId = idSchema.parse(value);
+      const access = await canManage(collelId);
+      if (!access.ok) return access;
+      if (!window) return { ok: false, error: 'FORBIDDEN' };
+      const chosen = await dialog.showOpenDialog(window, {
+        title: texts.catalog.importTitle,
+        properties: ['openFile'],
+        filters: [{ name: texts.catalog.excelFile, extensions: ['xlsx'] }],
+      });
+      const file = chosen.filePaths[0];
+      if (chosen.canceled || !file) return { ok: true, data: null };
+      if ((await stat(file)).size > 5 * 1024 * 1024) return { ok: false, error: 'INVALID_INPUT' };
+      return { ok: true, data: await parseBookWorkbook(await readFile(file), path.basename(file)) };
+    });
+    handle('books:template', async (value) => {
+      const access = await canManage(idSchema.parse(value));
+      if (!access.ok) return access;
+      if (!window) return { ok: false, error: 'FORBIDDEN' };
+      const chosen = await dialog.showSaveDialog(window, {
+        title: texts.catalog.template,
+        defaultPath: 'קטלוג.xlsx',
+        filters: [{ name: texts.catalog.excelFile, extensions: ['xlsx'] }],
+      });
+      if (!chosen.canceled && chosen.filePath)
+        await writeFile(chosen.filePath, Buffer.from(await bookTemplate()));
+      return { ok: true, data: null };
+    });
     handle('platform:setup-status', () => api.setupStatus());
     handle('platform:setup', (value) => api.setup(setupInputSchema.parse(value)));
     handle('platform:login', (value) => api.platformLogin(loginSchema.parse(value)));

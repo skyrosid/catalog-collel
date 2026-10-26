@@ -4,8 +4,9 @@
 
 L’API est le seul composant disposant d’un accès PostgreSQL. Elle est déployable
 indépendamment du bureau. Le renderer React ne reçoit ni secret PostgreSQL ni
-jeton de session. Il utilise quatre méthodes typées du pont : `login`, `logout`,
-`session` et `collel`. Il n’existe pas de pont HTTP, SQL ou IPC générique.
+jeton de session. Il utilise des capacités typées du pont pour l’authentification,
+l’administration et le catalogue, dont la lecture locale d’un fichier Excel choisi
+dans un dialogue natif. Il n’existe pas de pont HTTP, SQL, fichier ou IPC générique.
 
 Le processus principal valide l’émetteur IPC (fenêtre, frame principale et origine),
 valide les entrées avec Zod et appelle une origine API fixe. Il refuse les
@@ -51,6 +52,9 @@ Deux schémas évitent de confondre données de catalogue et données d’authen
 
 - `app.collels` contient les établissements avec RLS activé et forcé. Sans contexte
   de session et de collel valide, aucune ligne n’est visible au rôle d’exécution.
+- `app.books` contient les fiches de catalogue, avec clé `(collel_id, id)` et RLS
+  activé et forcé. Les adhérents peuvent lire ; les écritures exigent aussi le rôle
+  administrateur dans le service et dans les politiques SQL.
 - `private.users`, `private.sessions` et `private.memberships` contiennent l’identité
   et les autorisations. Le rôle d’exécution n’a aucun accès direct à ce schéma.
   Des fonctions `SECURITY DEFINER` bornées permettent la connexion et la résolution
@@ -98,7 +102,8 @@ L’interface est uniquement en hébreu : `lang="he"` et `dir="rtl"` sont fixes.
 Un simple objet TypeScript dans `apps/desktop/src/shared/texts.ts` centralise tous
 les textes et le titre de fenêtre, avec typage des codes d’erreur. Les espacements
 utilisent les axes logiques et les identifiants ont `dir="auto"`.
-Les polices système évitent les téléchargements externes. shadcn/ui fournit les
+Les polices hébraïques Heebo et Frank Ruhl Libre sont embarquées avec l’application,
+sans téléchargement externe à l’utilisation. shadcn/ui fournit les
 composants locaux, modifiables et configurés par `components.json` ; Tailwind 4
 est intégré au build Vite. Aucun état métier ni cache persistant n’est introduit.
 

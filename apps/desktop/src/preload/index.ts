@@ -2,6 +2,16 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopApi } from '@catalog/contracts';
 
 const bridge: DesktopApi = {
+  listBooks: (collelId, query) => ipcRenderer.invoke('books:list', { collelId, query }),
+  getBook: (collelId, id) => ipcRenderer.invoke('books:read', { collelId, id }),
+  createBook: (collelId, input) => ipcRenderer.invoke('books:create', { collelId, input }),
+  updateBook: (collelId, id, input) => ipcRenderer.invoke('books:update', { collelId, id, input }),
+  deleteBook: (collelId, book) => ipcRenderer.invoke('books:delete', { collelId, book }),
+  moveBooks: (collelId, input) => ipcRenderer.invoke('books:move', { collelId, input }),
+  bulkBooks: (collelId, input) => ipcRenderer.invoke('books:bulk', { collelId, input }),
+  importBooks: (collelId, books) => ipcRenderer.invoke('books:import', { collelId, books }),
+  chooseBookImport: (collelId) => ipcRenderer.invoke('books:choose-import', collelId),
+  saveBookTemplate: (collelId) => ipcRenderer.invoke('books:template', collelId),
   login: (input) => ipcRenderer.invoke('auth:login', input),
   activate: (input) => ipcRenderer.invoke('catalog:activate', input),
   deactivate: () => ipcRenderer.invoke('catalog:deactivate'),

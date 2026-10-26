@@ -149,11 +149,14 @@ export function Modal({
         event.preventDefault();
         if (!busy) onCancel();
       }}
-      className="fixed inset-0 m-auto max-h-[90vh] w-[min(92vw,34rem)] overflow-y-auto rounded-xl border bg-card p-0 text-foreground shadow-xl backdrop:bg-sidebar/55 backdrop:backdrop-blur-xs"
+      className="app-dialog fixed inset-0 m-auto max-h-[90vh] w-[min(92vw,34rem)] overflow-y-auto rounded-[20px] border bg-card p-0 text-foreground shadow-xl backdrop:bg-sidebar/55 backdrop:backdrop-blur-xs"
     >
       <header className="flex items-start justify-between gap-4 border-b p-6">
-        <div>
-          <h2 id={titleId} className="font-display text-2xl font-bold leading-tight">
+        <div className="min-w-0">
+          <h2
+            id={titleId}
+            className="font-display text-2xl font-semibold leading-tight break-words"
+          >
             {title}
           </h2>
           {description && (
@@ -187,6 +190,9 @@ export function Confirmation({
   onConfirm,
   onClose,
   confirmationText,
+  confirmationLabel,
+  confirmLabel = t.platform.confirm,
+  error,
   destructive = false,
 }: {
   title: string;
@@ -195,11 +201,19 @@ export function Confirmation({
   onConfirm: () => void;
   onClose: () => void;
   confirmationText?: string;
+  confirmationLabel?: string;
+  confirmLabel?: string;
+  error?: string | null;
   destructive?: boolean;
 }) {
   const [confirmation, setConfirmation] = useState('');
   return (
     <Modal title={title} busy={busy} onCancel={onClose}>
+      {error && (
+        <div className="mb-5">
+          <Notice>{error}</Notice>
+        </div>
+      )}
       <div className="mb-6 flex items-start gap-3">
         <span
           className={cn(
@@ -215,7 +229,7 @@ export function Confirmation({
         <div className="mb-6 space-y-3">
           <label className="block space-y-3 text-sm">
             <span>
-              {t.platform.deleteConfirmation}{' '}
+              {confirmationLabel ?? t.platform.deleteConfirmation}{' '}
               <bdi className="font-mono font-semibold">{confirmationText}</bdi>
             </span>
             <Input
@@ -224,7 +238,7 @@ export function Confirmation({
               autoComplete="off"
               spellCheck={false}
               disabled={busy}
-              dir="ltr"
+              dir="auto"
             />
           </label>
         </div>
@@ -238,7 +252,7 @@ export function Confirmation({
           disabled={busy || (confirmationText !== undefined && confirmation !== confirmationText)}
           onClick={onConfirm}
         >
-          {busy ? t.saving : t.platform.confirm}
+          {busy ? t.saving : confirmLabel}
         </Button>
       </FormActions>
     </Modal>

@@ -10,6 +10,9 @@ import {
   collelDirectoryEntrySchema,
   generatedCredentialsSchema,
   activationResponseSchema,
+  bookSchema,
+  bookDirectorySchema,
+  importSummarySchema,
 } from '@catalog/contracts';
 import type { DesktopApi, ErrorCode, LoginInput, Result, Session } from '@catalog/contracts';
 
@@ -41,7 +44,7 @@ export function createApiClient(
     load: async () => null,
     save: async () => {},
   },
-): DesktopApi {
+): Omit<DesktopApi, 'chooseBookImport' | 'saveBookTemplate'> {
   let token: string | undefined;
   let generation = 0;
   let deviceSession = false;
@@ -169,6 +172,67 @@ export function createApiClient(
   }
 
   return {
+    listBooks: (collelId, input) =>
+      result(() => {
+        const query = new URLSearchParams(
+          Object.entries(input).map(([key, value]) => [key, String(value)]),
+        );
+        return request(
+          `/v1/collels/${encodeURIComponent(collelId)}/books?${query}`,
+          bookDirectorySchema,
+        );
+      }),
+    getBook: (collelId, id) =>
+      result(() =>
+        request(
+          `/v1/collels/${encodeURIComponent(collelId)}/books/${encodeURIComponent(id)}`,
+          bookSchema,
+        ),
+      ),
+    createBook: (collelId, input) =>
+      result(() =>
+        request(`/v1/collels/${encodeURIComponent(collelId)}/books`, bookSchema, {
+          method: 'POST',
+          body: JSON.stringify(input),
+        }),
+      ),
+    updateBook: (collelId, id, input) =>
+      result(() =>
+        request(
+          `/v1/collels/${encodeURIComponent(collelId)}/books/${encodeURIComponent(id)}`,
+          bookSchema,
+          { method: 'PATCH', body: JSON.stringify(input) },
+        ),
+      ),
+    deleteBook: (collelId, book) =>
+      result(() =>
+        request(
+          `/v1/collels/${encodeURIComponent(collelId)}/books/${encodeURIComponent(book.id)}`,
+          z.null(),
+          { method: 'DELETE', body: JSON.stringify({ version: book.version }) },
+        ),
+      ),
+    moveBooks: (collelId, input) =>
+      result(() =>
+        request(`/v1/collels/${encodeURIComponent(collelId)}/books/move`, z.null(), {
+          method: 'POST',
+          body: JSON.stringify(input),
+        }),
+      ),
+    bulkBooks: (collelId, input) =>
+      result(() =>
+        request(`/v1/collels/${encodeURIComponent(collelId)}/books/bulk`, z.null(), {
+          method: 'POST',
+          body: JSON.stringify(input),
+        }),
+      ),
+    importBooks: (collelId, books) =>
+      result(() =>
+        request(`/v1/collels/${encodeURIComponent(collelId)}/books/import`, importSummarySchema, {
+          method: 'POST',
+          body: JSON.stringify({ books }),
+        }),
+      ),
     login: (input) => signIn('/v1/auth/login', input),
     activate: (input) =>
       result(async () => {

@@ -18,6 +18,14 @@ const principal: Principal = {
   },
 };
 const services: Services = {
+  listBooks: vi.fn(),
+  getBook: vi.fn(),
+  createBook: vi.fn(),
+  updateBook: vi.fn(),
+  deleteBook: vi.fn(),
+  moveBooks: vi.fn(),
+  bulkBooks: vi.fn(),
+  importBooks: vi.fn(),
   setupStatus: vi.fn(),
   deleteCollel: vi.fn(),
   setup: vi.fn(),
