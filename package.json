@@ -22,7 +22,7 @@
     "package:desktop": "pnpm build && pnpm --filter @catalog/desktop package"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.11",
+    "@electric-sql/pglite": "^0.5.13",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.0.0",
     "eslint": "^10.13.0",
